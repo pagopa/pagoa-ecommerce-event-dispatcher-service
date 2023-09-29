@@ -28,7 +28,7 @@ microservice-chart:
       PAYMENT_TRANSACTIONS_GATEWAY_URI: https://api.uat.platform.pagopa.it/payment-transactions-gateway/internal/v1
       PAYMENT_TRANSACTIONS_GATEWAY_READ_TIMEOUT: "10000"
       PAYMENT_TRANSACTIONS_GATEWAY_CONNECTION_TIMEOUT: "10000"
-      NODO_URI: https://api.uat.platform.pagopa.it/nodo/nodo-per-pm/v2
+      NODO_URI: https://api.uat.platform.pagopa.it/nodo-auth/nodo-per-pm/v2
       NODO_READ_TIMEOUT: "10000"
       NODO_CONNECTION_TIMEOUT: "10000"
       MONGO_HOST: pagopa-u-weu-ecommerce-cosmos-account.mongo.cosmos.azure.com
@@ -146,7 +146,7 @@ microservice-chart:
     PAYMENT_TRANSACTIONS_GATEWAY_URI: https://api.uat.platform.pagopa.it/payment-transactions-gateway/internal/v1
     PAYMENT_TRANSACTIONS_GATEWAY_READ_TIMEOUT: "10000"
     PAYMENT_TRANSACTIONS_GATEWAY_CONNECTION_TIMEOUT: "10000"
-    NODO_URI: https://api.uat.platform.pagopa.it/nodo/nodo-per-pm/v2
+    NODO_URI: https://api.uat.platform.pagopa.it/nodo-auth/nodo-per-pm/v2
     NODO_READ_TIMEOUT: "10000"
     NODO_CONNECTION_TIMEOUT: "10000"
     MONGO_HOST: pagopa-u-weu-ecommerce-cosmos-account.mongo.cosmos.azure.com

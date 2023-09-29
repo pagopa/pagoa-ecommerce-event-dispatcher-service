@@ -41,7 +41,8 @@ class WebClientConfig {
   fun nodoApi(
     @Value("\${nodo.uri}") nodoUri: String,
     @Value("\${nodo.readTimeout}") nodoReadTimeout: Long,
-    @Value("\${nodo.connectionTimeout}") nodoConnectionTimeout: Int
+    @Value("\${nodo.connectionTimeout}") nodoConnectionTimeout: Int,
+    @Value("\${nodo.closepayment.apikey}") nodoClosePaymentApiKey: String
   ): NodoApi {
     val httpClient: HttpClient =
       HttpClient.create()
@@ -68,6 +69,7 @@ class WebClientConfig {
     val webClient =
       NodoApiClient.buildWebClientBuilder()
         .clientConnector(ReactorClientHttpConnector(httpClient))
+        .defaultHeader("ocp-apim-subscription-key", nodoClosePaymentApiKey)
         .exchangeStrategies(exchangeStrategies)
         .baseUrl(nodoUri)
         .build()

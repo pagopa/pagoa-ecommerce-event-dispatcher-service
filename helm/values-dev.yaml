@@ -82,7 +82,7 @@ microservice-chart:
     NOTIFICATIONS_SERVICE_URI: https://api.dev.platform.pagopa.it/ecommerce/notifications-service/v1
     NOTIFICATIONS_SERVICE_READ_TIMEOUT: "10000"
     NOTIFICATIONS_SERVICE_CONNECTION_TIMEOUT: "10000"
-    NODO_URI: https://api.dev.platform.pagopa.it/nodo/nodo-per-pm/v2
+    NODO_URI: https://api.dev.platform.pagopa.it/nodo-auth/nodo-per-pm/v2
     NODO_READ_TIMEOUT: "10000"
     NODO_CONNECTION_TIMEOUT: "10000"
     MONGO_HOST: pagopa-d-weu-ecommerce-cosmos-account.mongo.cosmos.azure.com
