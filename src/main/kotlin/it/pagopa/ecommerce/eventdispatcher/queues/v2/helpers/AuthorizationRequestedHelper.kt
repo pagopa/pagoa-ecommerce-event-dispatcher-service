@@ -3,8 +3,6 @@ package it.pagopa.ecommerce.eventdispatcher.queues.v2.helpers
 import com.azure.spring.messaging.checkpoint.Checkpointer
 import io.vavr.control.Either
 import it.pagopa.ecommerce.commons.documents.v2.*
-import it.pagopa.ecommerce.commons.domain.v2.EmptyTransaction
-import it.pagopa.ecommerce.commons.domain.v2.Transaction
 import it.pagopa.ecommerce.commons.domain.v2.pojos.*
 import it.pagopa.ecommerce.commons.generated.server.model.TransactionStatusDto
 import it.pagopa.ecommerce.commons.queues.QueueEvent
@@ -59,13 +57,11 @@ class AuthorizationRequestedHelper(
     val tracingInfo = getTracingInfo(parsedEvent)
     val transactionId = getTransactionId(parsedEvent)
     val retryCount = getRetryCount(parsedEvent)
-    val baseTransaction =
-      Mono.defer {
-        transactionsEventStoreRepository
-          .findByTransactionIdOrderByCreationDateAsc(transactionId)
-          .reduce(EmptyTransaction(), Transaction::applyEvent)
-          .cast(BaseTransaction::class.java)
-      }
+    val events =
+      transactionsEventStoreRepository
+        .findByTransactionIdOrderByCreationDateAsc(transactionId)
+        .map { it as TransactionEvent<Any> }
+    val baseTransaction = Mono.defer { reduceEvents(events) }
 
     val authorizationRequestedPipeline =
       baseTransaction

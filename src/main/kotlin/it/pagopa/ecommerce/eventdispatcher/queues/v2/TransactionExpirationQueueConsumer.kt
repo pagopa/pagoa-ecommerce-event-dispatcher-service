@@ -23,7 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.messaging.MessageHeaders
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
@@ -66,12 +65,10 @@ class TransactionExpirationQueueConsumer(
     val event = queueEvent.fold({ it }, { it })
     val transactionId = queueEvent.fold({ it.event.transactionId }, { it.event.transactionId })
     val events =
-      Flux.defer {
-        transactionsEventStoreRepository
-          .findByTransactionIdOrderByCreationDateAsc(transactionId)
-          .map { it as TransactionEvent<Any> }
-      }
-    val baseTransaction = reduceEvents(events)
+      transactionsEventStoreRepository
+        .findByTransactionIdOrderByCreationDateAsc(transactionId)
+        .map { it as TransactionEvent<Any> }
+    val baseTransaction = Mono.defer { reduceEvents(events) }
     val refundPipeline =
       baseTransaction
         .filter {

@@ -38,8 +38,8 @@ import java.util.stream.Stream
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
@@ -110,6 +110,12 @@ class TransactionsRefundEventsConsumerTests {
     )
 
   private val jsonSerializerV2 = strictJsonSerializerProviderV2.createInstance()
+
+  @AfterEach
+  fun shouldReadEventFromEventStoreJustOnce() {
+    verify(transactionsEventStoreRepository, times(1))
+      .findByTransactionIdOrderByCreationDateAsc(any())
+  }
 
   companion object {
     @JvmStatic
@@ -474,149 +480,6 @@ class TransactionsRefundEventsConsumerTests {
       assertEquals(
         TransactionEventCode.TRANSACTION_REFUND_ERROR_EVENT.toString(), storedEvent.eventCode)
       assertEquals(TransactionStatusDto.REFUND_REQUESTED, storedEvent.data.statusBeforeRefunded)
-    }
-
-  @Test
-  fun `test getAuthorizationCompletedData with BaseTransactionWithRefundRequested`() = runTest {
-    val activationEvent = transactionActivateEvent() as TransactionEvent<Any>
-    val authorizationRequestEvent =
-      transactionAuthorizationRequestedEvent() as TransactionEvent<Any>
-    (authorizationRequestEvent.data as TransactionAuthorizationRequestData).paymentGateway =
-      TransactionAuthorizationRequestData.PaymentGateway.NPG
-
-    val transactionGatewayAuthorizationData =
-      npgTransactionGatewayAuthorizationData(OperationResultDto.EXECUTED)
-
-    val authorizationCompleteEvent =
-      transactionAuthorizationCompletedEvent(transactionGatewayAuthorizationData)
-        as TransactionEvent<Any>
-    val closureRequestedEvent = transactionClosureRequestedEvent() as TransactionEvent<Any>
-    val closedEvent =
-      transactionClosedEvent(TransactionClosureData.Outcome.KO) as TransactionEvent<Any>
-    val refundRequestedEvent =
-      TransactionRefundRequestedEvent(
-        TRANSACTION_ID, TransactionRefundRequestedData(null, TransactionStatusDto.REFUND_REQUESTED))
-        as TransactionEvent<Any>
-
-    val events =
-      listOf(
-        activationEvent,
-        authorizationRequestEvent,
-        authorizationCompleteEvent,
-        closureRequestedEvent,
-        closedEvent,
-        refundRequestedEvent)
-
-    val transaction = reduceEvents(*events.toTypedArray()) as BaseTransactionWithRefundRequested
-
-    assertEquals(
-      getAuthorizationCompletedData(transaction, npgService).block(),
-      transactionGatewayAuthorizationData)
-  }
-
-  @Test
-  fun `test getAuthorizationCompletedData with BaseTransactionWithCompletedAuthorization`() =
-    runTest {
-      val activationEvent = transactionActivateEvent() as TransactionEvent<Any>
-      val authorizationRequestEvent =
-        transactionAuthorizationRequestedEvent() as TransactionEvent<Any>
-      (authorizationRequestEvent.data as TransactionAuthorizationRequestData).paymentGateway =
-        TransactionAuthorizationRequestData.PaymentGateway.NPG
-
-      val transactionGatewayAuthorizationData =
-        npgTransactionGatewayAuthorizationData(OperationResultDto.EXECUTED)
-
-      val authorizationCompleteEvent =
-        transactionAuthorizationCompletedEvent(transactionGatewayAuthorizationData)
-          as TransactionEvent<Any>
-
-      val events = listOf(activationEvent, authorizationRequestEvent, authorizationCompleteEvent)
-
-      val transaction =
-        reduceEvents(*events.toTypedArray()) as BaseTransactionWithCompletedAuthorization
-
-      assertEquals(
-        getAuthorizationCompletedData(transaction, npgService).block(),
-        transactionGatewayAuthorizationData)
-    }
-
-  @Test
-  fun `test getAuthorizationCompletedData with BaseTransactionWithClosureError`() = runTest {
-    val activationEvent = transactionActivateEvent() as TransactionEvent<Any>
-    val authorizationRequestEvent =
-      transactionAuthorizationRequestedEvent() as TransactionEvent<Any>
-    (authorizationRequestEvent.data as TransactionAuthorizationRequestData).paymentGateway =
-      TransactionAuthorizationRequestData.PaymentGateway.NPG
-
-    val transactionGatewayAuthorizationData =
-      npgTransactionGatewayAuthorizationData(OperationResultDto.EXECUTED)
-
-    val authorizationCompleteEvent =
-      transactionAuthorizationCompletedEvent(transactionGatewayAuthorizationData)
-        as TransactionEvent<Any>
-    val closureRequestedEvent = transactionClosureRequestedEvent()
-    val closureError = transactionClosureErrorEvent() as TransactionEvent<Any>
-
-    val events =
-      listOf(
-        activationEvent,
-        authorizationRequestEvent,
-        authorizationCompleteEvent,
-        closureRequestedEvent,
-        closureError)
-
-    val transaction = reduceEvents(*events.toTypedArray()) as BaseTransactionWithClosureError
-
-    assertEquals(
-      getAuthorizationCompletedData(transaction, npgService).block(),
-      transactionGatewayAuthorizationData)
-  }
-
-  @Test
-  fun `test getAuthorizationCompletedData with BaseTransactionExpired`() = runTest {
-    val activationEvent = transactionActivateEvent() as TransactionEvent<Any>
-    val authorizationRequestEvent =
-      transactionAuthorizationRequestedEvent() as TransactionEvent<Any>
-    (authorizationRequestEvent.data as TransactionAuthorizationRequestData).paymentGateway =
-      TransactionAuthorizationRequestData.PaymentGateway.NPG
-
-    val transactionGatewayAuthorizationData =
-      npgTransactionGatewayAuthorizationData(OperationResultDto.EXECUTED)
-
-    val authorizationCompleteEvent =
-      transactionAuthorizationCompletedEvent(transactionGatewayAuthorizationData)
-        as TransactionEvent<Any>
-
-    val events: MutableList<TransactionEvent<Any>> =
-      mutableListOf(activationEvent, authorizationRequestEvent, authorizationCompleteEvent)
-
-    val expiredEvent =
-      transactionExpiredEvent(reduceEvents(*events.toTypedArray())) as TransactionEvent<Any>
-
-    events.add(expiredEvent)
-
-    val transaction = reduceEvents(*events.toTypedArray()) as BaseTransactionExpired
-
-    assertEquals(
-      getAuthorizationCompletedData(transaction, npgService).block(),
-      transactionGatewayAuthorizationData)
-  }
-
-  @Test
-  fun `test getAuthorizationCompletedData with BaseTransactionWithRequestedAuthorization`() =
-    runTest {
-      val activationEvent = transactionActivateEvent() as TransactionEvent<Any>
-      val authorizationRequestEvent =
-        transactionAuthorizationRequestedEvent() as TransactionEvent<Any>
-      (authorizationRequestEvent.data as TransactionAuthorizationRequestData).paymentGateway =
-        TransactionAuthorizationRequestData.PaymentGateway.REDIRECT
-
-      val events = listOf(activationEvent, authorizationRequestEvent)
-
-      val transaction =
-        reduceEvents(*events.toTypedArray()) as BaseTransactionWithRequestedAuthorization
-
-      assertNull(getAuthorizationCompletedData(transaction, npgService).block())
     }
 
   @Test

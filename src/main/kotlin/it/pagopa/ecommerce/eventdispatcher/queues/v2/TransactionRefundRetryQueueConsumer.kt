@@ -2,10 +2,8 @@ package it.pagopa.ecommerce.eventdispatcher.queues.v2
 
 import com.azure.spring.messaging.checkpoint.Checkpointer
 import it.pagopa.ecommerce.commons.documents.v2.BaseTransactionRefundedData
+import it.pagopa.ecommerce.commons.documents.v2.TransactionEvent
 import it.pagopa.ecommerce.commons.documents.v2.TransactionRefundRetriedEvent
-import it.pagopa.ecommerce.commons.domain.v2.EmptyTransaction
-import it.pagopa.ecommerce.commons.domain.v2.Transaction
-import it.pagopa.ecommerce.commons.domain.v2.pojos.BaseTransaction
 import it.pagopa.ecommerce.commons.generated.server.model.TransactionStatusDto
 import it.pagopa.ecommerce.commons.queues.QueueEvent
 import it.pagopa.ecommerce.commons.queues.StrictJsonSerializerProvider
@@ -52,11 +50,11 @@ class TransactionRefundRetryQueueConsumer(
   ): Mono<Unit> {
     val event = parsedEvent.event
     val tracingInfo = parsedEvent.tracingInfo
-    val baseTransaction =
+    val events =
       transactionsEventStoreRepository
         .findByTransactionIdOrderByCreationDateAsc(event.transactionId)
-        .reduce(EmptyTransaction(), Transaction::applyEvent)
-        .cast(BaseTransaction::class.java)
+        .map { it as TransactionEvent<Any> }
+    val baseTransaction = Mono.defer { reduceEvents(events) }
     val refundPipeline =
       baseTransaction
         .flatMap {

@@ -5,7 +5,6 @@ import com.azure.core.util.serializer.TypeReference
 import com.azure.spring.messaging.checkpoint.Checkpointer
 import it.pagopa.ecommerce.commons.documents.v2.*
 import it.pagopa.ecommerce.commons.documents.v2.authorization.NpgTransactionGatewayAuthorizationData
-import it.pagopa.ecommerce.commons.domain.Email
 import it.pagopa.ecommerce.commons.domain.TransactionId
 import it.pagopa.ecommerce.commons.domain.v2.TransactionEventCode
 import it.pagopa.ecommerce.commons.domain.v2.pojos.BaseTransactionWithRequestedUserReceipt
@@ -22,18 +21,17 @@ import it.pagopa.ecommerce.eventdispatcher.repositories.TransactionsViewReposito
 import it.pagopa.ecommerce.eventdispatcher.services.eventretry.v2.NotificationRetryService
 import it.pagopa.ecommerce.eventdispatcher.services.v2.AuthorizationStateRetrieverService
 import it.pagopa.ecommerce.eventdispatcher.services.v2.NpgService
-import it.pagopa.ecommerce.eventdispatcher.utils.ConfidentialDataUtils
 import it.pagopa.ecommerce.eventdispatcher.utils.DeadLetterTracedQueueAsyncClient
 import it.pagopa.ecommerce.eventdispatcher.utils.TRANSIENT_QUEUE_TTL_SECONDS
 import it.pagopa.ecommerce.eventdispatcher.utils.queueSuccessfulResponse
 import it.pagopa.ecommerce.eventdispatcher.utils.v2.UserReceiptMailBuilder
-import it.pagopa.generated.notifications.templates.success.SuccessTemplate
 import it.pagopa.generated.notifications.v1.dto.NotificationEmailRequestDto
 import it.pagopa.generated.notifications.v1.dto.NotificationEmailResponseDto
 import java.time.ZonedDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -113,6 +111,12 @@ class TransactionNotificationsQueueConsumerTest {
         ),
       transientQueueTTLSeconds = TRANSIENT_QUEUE_TTL_SECONDS,
     )
+
+  @AfterEach
+  fun shouldReadEventFromEventStoreJustOnce() {
+    verify(transactionsEventStoreRepository, times(1))
+      .findByTransactionIdOrderByCreationDateAsc(any())
+  }
 
   @Test
   fun `Should successfully send user email for send payment result outcome OK`() = runTest {
@@ -460,8 +464,7 @@ class TransactionNotificationsQueueConsumerTest {
         .expectNext(Unit)
         .verifyComplete()
       verify(checkpointer, times(1)).success()
-      verify(transactionsEventStoreRepository, times(1))
-        .findByTransactionIdOrderByCreationDateAsc(transactionId)
+
       verify(notificationsServiceClient, times(1)).sendNotificationEmail(any())
       verify(notificationRetryService, times(1)).enqueueRetryEvent(any(), any(), any(), anyOrNull())
       verify(transactionsViewRepository, times(1)).save(any())
@@ -529,8 +532,7 @@ class TransactionNotificationsQueueConsumerTest {
         .expectNext(Unit)
         .verifyComplete()
       verify(checkpointer, times(1)).success()
-      verify(transactionsEventStoreRepository, times(1))
-        .findByTransactionIdOrderByCreationDateAsc(transactionId)
+
       verify(notificationsServiceClient, times(1)).sendNotificationEmail(any())
       verify(notificationRetryService, times(1)).enqueueRetryEvent(any(), any(), any(), anyOrNull())
       verify(transactionsViewRepository, times(1)).save(any())
@@ -608,8 +610,7 @@ class TransactionNotificationsQueueConsumerTest {
         .expectNext(Unit)
         .verifyComplete()
       verify(checkpointer, times(1)).success()
-      verify(transactionsEventStoreRepository, times(1))
-        .findByTransactionIdOrderByCreationDateAsc(transactionId)
+
       verify(notificationsServiceClient, times(1)).sendNotificationEmail(any())
       verify(notificationRetryService, times(1)).enqueueRetryEvent(any(), any(), any(), anyOrNull())
       verify(transactionsViewRepository, times(1)).save(any())
@@ -699,93 +700,6 @@ class TransactionNotificationsQueueConsumerTest {
   }
 
   @Test
-  fun `Should set right value string to payee template name field when TransactionUserReceiptData receivingOfficeName is not null`() =
-    runTest {
-      val confidentialDataUtils: ConfidentialDataUtils = mock()
-      given(confidentialDataUtils.toEmail(any())).willReturn(Email("to@to.it"))
-      val userReceiptBuilder = UserReceiptMailBuilder(confidentialDataUtils)
-      val transactionUserReceiptData =
-        TransactionUserReceiptData(TransactionUserReceiptData.Outcome.OK, "it-IT", PAYMENT_DATE)
-      val companyName = "testCompanyName"
-      val transactionActivatedEvent = transactionActivateEvent()
-      transactionActivatedEvent.data.paymentNotices.forEach { it.companyName = companyName }
-      val notificationRequested = transactionUserReceiptRequestedEvent(transactionUserReceiptData)
-      val events =
-        listOf(
-          transactionActivatedEvent,
-          transactionAuthorizationRequestedEvent(),
-          transactionAuthorizationCompletedEvent(
-            NpgTransactionGatewayAuthorizationData(
-              OperationResultDto.EXECUTED, "operationId", "paymentEnd2EndId", null, null)),
-          transactionClosureRequestedEvent(),
-          transactionClosedEvent(TransactionClosureData.Outcome.OK),
-          notificationRequested)
-          as List<TransactionEvent<Any>>
-      val baseTransaction =
-        reduceEvents(*events.toTypedArray()) as BaseTransactionWithRequestedUserReceipt
-      val transactionId = TRANSACTION_ID
-      Hooks.onOperatorDebug()
-      given(checkpointer.success()).willReturn(Mono.empty())
-      given(
-          transactionsEventStoreRepository.findByTransactionIdOrderByCreationDateAsc(transactionId))
-        .willReturn(Flux.fromIterable(events))
-
-      val notificationEmailRequestDto =
-        userReceiptBuilder.buildNotificationEmailRequestDto(baseTransaction)
-      assertEquals(
-        companyName,
-        (notificationEmailRequestDto.parameters as SuccessTemplate)
-          .cart
-          .items
-          .filter { i -> i.payee != null }[0]
-          .payee
-          .name)
-    }
-
-  @Test
-  fun `Should set empty string to payee template name field when TransactionUserReceiptData receivingOfficeName is null`() =
-    runTest {
-      val confidentialDataUtils: ConfidentialDataUtils = mock()
-      given(confidentialDataUtils.toEmail(any())).willReturn(Email("to@to.it"))
-      val userReceiptBuilder = UserReceiptMailBuilder(confidentialDataUtils)
-      val transactionUserReceiptData =
-        TransactionUserReceiptData(TransactionUserReceiptData.Outcome.OK, "it-IT", PAYMENT_DATE)
-      val notificationRequested = transactionUserReceiptRequestedEvent(transactionUserReceiptData)
-      val transactionActivatedEvent = transactionActivateEvent()
-      transactionActivatedEvent.data.paymentNotices.forEach { it.companyName = null }
-      val events =
-        listOf(
-          transactionActivatedEvent,
-          transactionAuthorizationRequestedEvent(),
-          transactionAuthorizationCompletedEvent(
-            NpgTransactionGatewayAuthorizationData(
-              OperationResultDto.EXECUTED, "operationId", "paymentEnd2EndId", null, null)),
-          transactionClosureRequestedEvent(),
-          transactionClosedEvent(TransactionClosureData.Outcome.OK),
-          notificationRequested)
-          as List<TransactionEvent<Any>>
-      val baseTransaction =
-        reduceEvents(*events.toTypedArray()) as BaseTransactionWithRequestedUserReceipt
-      val transactionId = TRANSACTION_ID
-      Hooks.onOperatorDebug()
-      given(checkpointer.success()).willReturn(Mono.empty())
-      given(
-          transactionsEventStoreRepository.findByTransactionIdOrderByCreationDateAsc(transactionId))
-        .willReturn(Flux.fromIterable(events))
-
-      val notificationEmailRequestDto =
-        userReceiptBuilder.buildNotificationEmailRequestDto(baseTransaction)
-      assertEquals(
-        "",
-        (notificationEmailRequestDto.parameters as SuccessTemplate)
-          .cart
-          .items
-          .filter { i -> i.payee != null }[0]
-          .payee
-          .name)
-    }
-
-  @Test
   fun `Should not process event for transaction with invalid send payment result outcome`() =
     runTest {
       val transactionUserReceiptData =
@@ -834,8 +748,7 @@ class TransactionNotificationsQueueConsumerTest {
         .expectNext(Unit)
         .verifyComplete()
       verify(checkpointer, times(1)).success()
-      verify(transactionsEventStoreRepository, times(1))
-        .findByTransactionIdOrderByCreationDateAsc(transactionId)
+
       verify(notificationsServiceClient, times(1)).sendNotificationEmail(any())
       verify(notificationRetryService, times(1)).enqueueRetryEvent(any(), any(), any(), anyOrNull())
       verify(transactionsViewRepository, times(1)).save(any())

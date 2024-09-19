@@ -36,6 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.given
 import org.mockito.kotlin.mock
+import reactor.core.publisher.Hooks
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UserReceiptMailBuilderTest {
@@ -984,5 +985,82 @@ class UserReceiptMailBuilderTest {
       assertEquals(
         objectMapper.writeValueAsString(expected),
         objectMapper.writeValueAsString(notificationEmailRequest))
+    }
+
+  @Test
+  fun `Should set right value string to payee template name field when TransactionUserReceiptData receivingOfficeName is not null`() =
+    runTest {
+      val confidentialDataUtils: ConfidentialDataUtils = mock()
+      given(confidentialDataUtils.toEmail(any())).willReturn(Email("to@to.it"))
+      val userReceiptBuilder = UserReceiptMailBuilder(confidentialDataUtils)
+      val transactionUserReceiptData =
+        TransactionUserReceiptData(TransactionUserReceiptData.Outcome.OK, "it-IT", PAYMENT_DATE)
+      val companyName = "testCompanyName"
+      val transactionActivatedEvent = transactionActivateEvent()
+      transactionActivatedEvent.data.paymentNotices.forEach { it.companyName = companyName }
+      val notificationRequested = transactionUserReceiptRequestedEvent(transactionUserReceiptData)
+      val events =
+        listOf(
+          transactionActivatedEvent,
+          transactionAuthorizationRequestedEvent(),
+          transactionAuthorizationCompletedEvent(
+            NpgTransactionGatewayAuthorizationData(
+              OperationResultDto.EXECUTED, "operationId", "paymentEnd2EndId", null, null)),
+          transactionClosureRequestedEvent(),
+          transactionClosedEvent(TransactionClosureData.Outcome.OK),
+          notificationRequested)
+          as List<TransactionEvent<Any>>
+      val baseTransaction =
+        reduceEvents(*events.toTypedArray()) as BaseTransactionWithRequestedUserReceipt
+      Hooks.onOperatorDebug()
+
+      val notificationEmailRequestDto =
+        userReceiptBuilder.buildNotificationEmailRequestDto(baseTransaction)
+      assertEquals(
+        companyName,
+        (notificationEmailRequestDto.parameters as SuccessTemplate)
+          .cart
+          .items
+          .filter { i -> i.payee != null }[0]
+          .payee
+          .name)
+    }
+
+  @Test
+  fun `Should set empty string to payee template name field when TransactionUserReceiptData receivingOfficeName is null`() =
+    runTest {
+      val confidentialDataUtils: ConfidentialDataUtils = mock()
+      given(confidentialDataUtils.toEmail(any())).willReturn(Email("to@to.it"))
+      val userReceiptBuilder = UserReceiptMailBuilder(confidentialDataUtils)
+      val transactionUserReceiptData =
+        TransactionUserReceiptData(TransactionUserReceiptData.Outcome.OK, "it-IT", PAYMENT_DATE)
+      val notificationRequested = transactionUserReceiptRequestedEvent(transactionUserReceiptData)
+      val transactionActivatedEvent = transactionActivateEvent()
+      transactionActivatedEvent.data.paymentNotices.forEach { it.companyName = null }
+      val events =
+        listOf(
+          transactionActivatedEvent,
+          transactionAuthorizationRequestedEvent(),
+          transactionAuthorizationCompletedEvent(
+            NpgTransactionGatewayAuthorizationData(
+              OperationResultDto.EXECUTED, "operationId", "paymentEnd2EndId", null, null)),
+          transactionClosureRequestedEvent(),
+          transactionClosedEvent(TransactionClosureData.Outcome.OK),
+          notificationRequested)
+          as List<TransactionEvent<Any>>
+      val baseTransaction =
+        reduceEvents(*events.toTypedArray()) as BaseTransactionWithRequestedUserReceipt
+      Hooks.onOperatorDebug()
+
+      val notificationEmailRequestDto =
+        userReceiptBuilder.buildNotificationEmailRequestDto(baseTransaction)
+      assertEquals(
+        "",
+        (notificationEmailRequestDto.parameters as SuccessTemplate)
+          .cart
+          .items
+          .filter { i -> i.payee != null }[0]
+          .payee
+          .name)
     }
 }

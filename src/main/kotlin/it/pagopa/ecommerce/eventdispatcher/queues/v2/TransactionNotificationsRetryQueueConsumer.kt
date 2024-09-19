@@ -84,7 +84,7 @@ class TransactionNotificationsRetryQueueConsumer(
         .findByTransactionIdOrderByCreationDateAsc(transactionId)
         .map { it as TransactionEvent<Any> }
 
-    val baseTransaction = reduceEvents(events, EmptyTransaction())
+    val baseTransaction = Mono.defer { reduceEvents(events, EmptyTransaction()) }
     val notificationResendPipeline =
       baseTransaction
         .flatMap {

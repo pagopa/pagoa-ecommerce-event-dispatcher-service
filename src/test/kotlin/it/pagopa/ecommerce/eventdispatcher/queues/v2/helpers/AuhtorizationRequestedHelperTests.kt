@@ -37,6 +37,7 @@ import java.util.stream.Stream
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
@@ -123,6 +124,12 @@ class AuhtorizationRequestedHelperTests {
       Stream.of(
         Arguments.of(EndToEndId.BANCOMAT_PAY, NpgClient.PaymentMethod.BANCOMATPAY),
         Arguments.of(EndToEndId.MYBANK, NpgClient.PaymentMethod.MYBANK))
+  }
+
+  @AfterEach
+  fun shouldReadEventFromEventStoreJustOnce() {
+    verify(transactionsEventStoreRepository, times(1))
+      .findByTransactionIdOrderByCreationDateAsc(any())
   }
 
   @ParameterizedTest

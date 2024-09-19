@@ -32,6 +32,7 @@ import java.time.ZonedDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -93,6 +94,12 @@ class TransactionRefundRetryQueueConsumerTest {
           refundDelayFromAuthRequestMinutes = npgDelayRefundFromAuthRequestMinutes,
         ),
     )
+
+  @AfterEach
+  fun shouldReadEventFromEventStoreJustOnce() {
+    verify(transactionsEventStoreRepository, times(1))
+      .findByTransactionIdOrderByCreationDateAsc(any())
+  }
 
   @Test
   fun `messageReceiver consume event correctly with OK outcome from gateway`() = runTest {

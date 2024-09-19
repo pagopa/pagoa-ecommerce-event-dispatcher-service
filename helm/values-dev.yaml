@@ -41,14 +41,14 @@ microservice-chart:
     httpGet:
       path: /actuator/health/liveness
       port: 9000
-    initialDelaySeconds: 180
+    initialDelaySeconds: 80
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
       port: 9000
-    initialDelaySeconds: 180
+    initialDelaySeconds: 80
     failureThreshold: 6
     periodSeconds: 10
   service:

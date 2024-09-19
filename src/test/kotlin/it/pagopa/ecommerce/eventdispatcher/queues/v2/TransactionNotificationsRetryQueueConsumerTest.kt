@@ -34,6 +34,7 @@ import java.time.ZonedDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -115,6 +116,12 @@ class TransactionNotificationsRetryQueueConsumerTest {
         ),
       transientQueueTTLSeconds = TRANSIENT_QUEUE_TTL_SECONDS)
 
+  @AfterEach
+  fun shouldReadEventFromEventStoreJustOnce() {
+    verify(transactionsEventStoreRepository, times(1))
+      .findByTransactionIdOrderByCreationDateAsc(any())
+  }
+
   @Test
   fun `Should successfully retry send user email for send payment result outcome OK`() = runTest {
     val transactionUserReceiptData =
@@ -158,8 +165,7 @@ class TransactionNotificationsRetryQueueConsumerTest {
       .expectNext(Unit)
       .verifyComplete()
     verify(checkpointer, times(1)).success()
-    verify(transactionsEventStoreRepository, times(1))
-      .findByTransactionIdOrderByCreationDateAsc(TRANSACTION_ID)
+
     verify(transactionUserReceiptRepository, times(1)).save(any())
     verify(notificationsServiceClient, times(1)).sendNotificationEmail(any())
     verify(notificationRetryService, times(0)).enqueueRetryEvent(any(), any(), any(), anyOrNull())
@@ -232,8 +238,7 @@ class TransactionNotificationsRetryQueueConsumerTest {
       .expectNext(Unit)
       .verifyComplete()
     verify(checkpointer, times(1)).success()
-    verify(transactionsEventStoreRepository, times(1))
-      .findByTransactionIdOrderByCreationDateAsc(TRANSACTION_ID)
+
     verify(notificationsServiceClient, times(1)).sendNotificationEmail(any())
     verify(notificationRetryService, times(0)).enqueueRetryEvent(any(), any(), any(), anyOrNull())
     verify(transactionsViewRepository, times(2)).save(any())
@@ -983,8 +988,7 @@ class TransactionNotificationsRetryQueueConsumerTest {
       .expectNext(Unit)
       .verifyComplete()
     verify(checkpointer, times(1)).success()
-    verify(transactionsEventStoreRepository, times(1))
-      .findByTransactionIdOrderByCreationDateAsc(TRANSACTION_ID)
+
     verify(notificationsServiceClient, times(0)).sendNotificationEmail(any())
     verify(notificationRetryService, times(0)).enqueueRetryEvent(any(), any(), any(), anyOrNull())
     verify(transactionsViewRepository, times(0)).save(any())

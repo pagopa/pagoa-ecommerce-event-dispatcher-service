@@ -70,7 +70,7 @@ class TransactionNotificationsQueueConsumer(
         .findByTransactionIdOrderByCreationDateAsc(transactionId)
         .map { it as TransactionEvent<Any> }
 
-    val baseTransaction = reduceEvents(events, emptyTransaction)
+    val baseTransaction = Mono.defer { reduceEvents(events, emptyTransaction) }
     val notificationResendPipeline =
       baseTransaction
         .flatMap {

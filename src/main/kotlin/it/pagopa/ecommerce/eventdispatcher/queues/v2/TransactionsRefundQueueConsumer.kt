@@ -3,11 +3,9 @@ package it.pagopa.ecommerce.eventdispatcher.queues.v2
 import com.azure.spring.messaging.checkpoint.Checkpointer
 import io.vavr.control.Either
 import it.pagopa.ecommerce.commons.documents.v2.BaseTransactionRefundedData
+import it.pagopa.ecommerce.commons.documents.v2.TransactionEvent
 import it.pagopa.ecommerce.commons.documents.v2.TransactionRefundRequestedEvent
 import it.pagopa.ecommerce.commons.documents.v2.TransactionRefundRetriedEvent
-import it.pagopa.ecommerce.commons.domain.v2.EmptyTransaction
-import it.pagopa.ecommerce.commons.domain.v2.Transaction
-import it.pagopa.ecommerce.commons.domain.v2.pojos.BaseTransaction
 import it.pagopa.ecommerce.commons.domain.v2.pojos.BaseTransactionWithRefundRequested
 import it.pagopa.ecommerce.commons.generated.server.model.TransactionStatusDto
 import it.pagopa.ecommerce.commons.queues.QueueEvent
@@ -64,11 +62,13 @@ class TransactionsRefundQueueConsumer(
     val event = parsedEvent.bimap({ it.event }, { it.event })
     val tracingInfo = parsedEvent.fold({ it.tracingInfo }, { it.tracingInfo })
     val transactionId = getTransactionIdFromPayload(event)
-    val refundPipeline =
+    val events =
       transactionsEventStoreRepository
         .findByTransactionIdOrderByCreationDateAsc(transactionId)
-        .reduce(EmptyTransaction(), Transaction::applyEvent)
-        .cast(BaseTransaction::class.java)
+        .map { it as TransactionEvent<Any> }
+    val baseTransaction = Mono.defer { reduceEvents(events) }
+    val refundPipeline =
+      baseTransaction
         .filter { it.status == TransactionStatusDto.REFUND_REQUESTED }
         .switchIfEmpty {
           logger.info("Transaction $transactionId was not previously authorized. No refund needed")
