@@ -19,7 +19,7 @@
 		<kotlinx-coroutines.version>1.6.2</kotlinx-coroutines.version>
 		<spring-cloud-azure.version>4.0.0</spring-cloud-azure.version>
 		<jacoco.version>0.8.8</jacoco.version>
-		<pagopa-ecommerce-commons.version>1.30.0</pagopa-ecommerce-commons.version>
+		<pagopa-ecommerce-commons.version>1.31.0</pagopa-ecommerce-commons.version>
 		<sonar.coverage.exclusions> <!-- the members of the following list should be in the same line -->
 			**/it/pagopa/transactions/**,
 			**/it/pagopa/ecommerce/eventdispatcher/validation/**
