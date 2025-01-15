@@ -9,6 +9,9 @@ import it.pagopa.ecommerce.commons.queues.QueueEvent
 import it.pagopa.ecommerce.commons.queues.StrictJsonSerializerProvider
 import it.pagopa.ecommerce.eventdispatcher.exceptions.InvalidEventException
 import it.pagopa.ecommerce.eventdispatcher.utils.DeadLetterTracedQueueAsyncClient
+import it.pagopa.ecommerce.eventdispatcher.warmup.annotations.WarmupFunction
+import it.pagopa.ecommerce.payment.requests.warmup.utils.DummyCheckpointer
+import it.pagopa.ecommerce.payment.requests.warmup.utils.WarmupRequests.getTransactionAuthorizationRequestedEvent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -83,5 +86,10 @@ class TransactionAuthorizationRequestedQueueConsumer(
           deadLetterTracedQueueAsyncClient,
           DeadLetterTracedQueueAsyncClient.PARSING_EVENT_ERROR_CONTEXT)
       }
+  }
+
+  @WarmupFunction
+  fun warmupService() {
+    messageReceiver(getTransactionAuthorizationRequestedEvent(), DummyCheckpointer).block()
   }
 }

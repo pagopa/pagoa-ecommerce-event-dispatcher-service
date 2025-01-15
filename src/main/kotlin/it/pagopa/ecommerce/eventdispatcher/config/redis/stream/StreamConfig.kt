@@ -14,6 +14,7 @@ import org.springframework.data.redis.hash.Jackson2HashMapper
 import org.springframework.data.redis.serializer.RedisSerializationContext
 import org.springframework.data.redis.serializer.StringRedisSerializer
 import org.springframework.data.redis.stream.StreamReceiver
+import org.springframework.integration.annotation.EndpointId
 import org.springframework.integration.annotation.InboundChannelAdapter
 import org.springframework.integration.annotation.Poller
 
@@ -34,7 +35,7 @@ class StreamConfig {
           EventDispatcherGenericCommand::class.java, EventDispatcherCommandMixin::class.java)
     val streamReceiverOptions =
       StreamReceiver.StreamReceiverOptions.builder()
-        .pollTimeout(Duration.ofMillis(100))
+        .pollTimeout(Duration.ofMillis(1000))
         .batchSize(1) // read one item per poll
         .keySerializer(
           RedisSerializationContext.SerializationPair.fromSerializer(StringRedisSerializer()))
@@ -51,7 +52,9 @@ class StreamConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "eventDispatcherReceiverCommandChannel",
-    poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "1")])
+    poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "1")],
+    autoStartup = "false")
+  @EndpointId("eventDispatcherReceiverCommandChannelEndpoint")
   fun eventDispatcherReceiverCommandMessageSource(
     redisStreamReceiver: StreamReceiver<String, ObjectRecord<String, LinkedHashMap<*, *>>>,
     eventDispatcherCommandsTemplateWrapper: EventDispatcherCommandsTemplateWrapper,

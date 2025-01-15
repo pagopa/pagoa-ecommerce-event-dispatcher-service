@@ -17,6 +17,9 @@ import it.pagopa.ecommerce.eventdispatcher.exceptions.InvalidEventException
 import it.pagopa.ecommerce.eventdispatcher.queues.v1.TransactionExpirationQueueConsumer as TransactionExpirationQueueConsumerV1
 import it.pagopa.ecommerce.eventdispatcher.queues.v2.TransactionExpirationQueueConsumer as TransactionExpirationQueueConsumerV2
 import it.pagopa.ecommerce.eventdispatcher.utils.DeadLetterTracedQueueAsyncClient
+import it.pagopa.ecommerce.eventdispatcher.warmup.annotations.WarmupFunction
+import it.pagopa.ecommerce.payment.requests.warmup.utils.DummyCheckpointer
+import it.pagopa.ecommerce.payment.requests.warmup.utils.WarmupRequests.getTransactionExpiredEvent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -170,5 +173,11 @@ class TransactionExpirationQueueConsumer(
           deadLetterTracedQueueAsyncClient,
           DeadLetterTracedQueueAsyncClient.PARSING_EVENT_ERROR_CONTEXT)
       }
+  }
+
+  @WarmupFunction
+  fun warmupService() {
+    messageReceiver(getTransactionExpiredEvent(), DummyCheckpointer, MessageHeaders(emptyMap()))
+      .block()
   }
 }

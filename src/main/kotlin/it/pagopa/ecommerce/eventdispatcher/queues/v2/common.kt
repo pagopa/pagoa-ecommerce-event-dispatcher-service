@@ -976,6 +976,7 @@ fun <T> runTracedPipelineWithDeadLetterQueue(
   spanName: String,
   jsonSerializerProviderV2: StrictJsonSerializerProvider
 ): Mono<Unit> {
+  val nullTransactionId = "00000000000000000000000000000000" // null event ID used in warmup phase
   val eventLogString = "${queueEvent.event.id}, transactionId: ${queueEvent.event.transactionId}"
 
   val deadLetterPipeline =
@@ -995,14 +996,19 @@ fun <T> runTracedPipelineWithDeadLetterQueue(
             else -> DeadLetterTracedQueueAsyncClient.ErrorCategory.PROCESSING_ERROR
           }
         logger.error("Exception processing event $eventLogString", pipelineException)
-        deadLetterTracedQueueAsyncClient.sendAndTraceDeadLetterQueueEvent(
-          binaryData = BinaryData.fromObject(queueEvent, jsonSerializerProviderV2.createInstance()),
-          errorContext =
-            DeadLetterTracedQueueAsyncClient.ErrorContext(
-              transactionId = TransactionId(queueEvent.event.transactionId),
-              transactionEventCode = queueEvent.event.eventCode,
-              errorCategory = errorCategory),
-        )
+        if (queueEvent.event.transactionId != nullTransactionId) {
+          deadLetterTracedQueueAsyncClient.sendAndTraceDeadLetterQueueEvent(
+            binaryData =
+              BinaryData.fromObject(queueEvent, jsonSerializerProviderV2.createInstance()),
+            errorContext =
+              DeadLetterTracedQueueAsyncClient.ErrorContext(
+                transactionId = TransactionId(queueEvent.event.transactionId),
+                transactionEventCode = queueEvent.event.eventCode,
+                errorCategory = errorCategory))
+        } else {
+          logger.info("Skipping dead letter queue for warmup event with null transaction ID")
+          Mono.just(Unit)
+        }
       }
 
   return tracingUtils

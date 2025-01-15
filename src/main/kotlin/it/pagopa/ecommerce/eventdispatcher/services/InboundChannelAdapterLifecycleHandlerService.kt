@@ -65,4 +65,11 @@ class InboundChannelAdapterLifecycleHandlerService(
       .getBeansWithAnnotation(InboundChannelAdapter::class.java)
       .filterNot { it.value is RedisStreamMessageSource }
       .keys
+
+  fun invokeCommandForRedisStreamMessageSource(command: String) {
+    val controllerBusMessage =
+      MessageBuilder.createMessage(
+        "@eventDispatcherReceiverCommandChannelEndpoint.$command()", MessageHeaders(mapOf()))
+    controlBusInput.send(controllerBusMessage)
+  }
 }

@@ -21,6 +21,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionclosureschannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueClosuresMessageSourceEndpoint")
   fun storageQueueClosuresMessageSource(
@@ -33,6 +34,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionretryclosureschannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueRetryClosuresMessageSourceEndpoint")
   fun storageQueueRetryClosuresMessageSource(
@@ -46,6 +48,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionexpiredchannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueExpirationsMessageSourceEndpoint")
   fun storageQueueExpirationsMessageSource(
@@ -58,6 +61,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionrefundretrychannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueRefundRetryMessageSourceEndpoint")
   fun storageQueueRefundRetryMessageSource(
@@ -70,6 +74,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionsrefundchannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueRefundMessageSourceEndpoint")
   fun storageQueueRefundMessageSource(
@@ -82,6 +87,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionretrynotificationschannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueRetryNotificationsMessageSourceEndpoint")
   fun storageQueueRetryNotificationsMessageSource(
@@ -96,6 +102,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionnotificationschannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueNotificationsMessageSourceEndpoint")
   fun storageQueueNotificationsMessageSource(
@@ -108,6 +115,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionsauthorizationrequestedchannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueAuthorizationRequestedMessageSourceEndpoint")
   fun storageQueueAuthorizationRequestedMessageSource(
@@ -121,6 +129,7 @@ class QueuesConsumerConfig {
   @Bean
   @InboundChannelAdapter(
     channel = "transactionsauthorizationoutcomewaitingchannel",
+    autoStartup = "false",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "10")])
   @EndpointId("storageQueueAuthorizationOutcomeWaitingMessageSourceEndpoint")
   fun storageQueueAuthorizationOutcomeWaitingMessageSource(
