@@ -1,8 +1,6 @@
 package it.pagopa.ecommerce.eventdispatcher.config.redis.stream
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import it.pagopa.ecommerce.eventdispatcher.config.RedisStreamEventControllerConfigs
-import it.pagopa.ecommerce.eventdispatcher.config.redis.EventDispatcherCommandsTemplateWrapper
 import it.pagopa.ecommerce.eventdispatcher.redis.streams.commands.EventDispatcherCommandMixin
 import it.pagopa.ecommerce.eventdispatcher.redis.streams.commands.EventDispatcherGenericCommand
 import java.time.Duration
@@ -14,9 +12,6 @@ import org.springframework.data.redis.hash.Jackson2HashMapper
 import org.springframework.data.redis.serializer.RedisSerializationContext
 import org.springframework.data.redis.serializer.StringRedisSerializer
 import org.springframework.data.redis.stream.StreamReceiver
-import org.springframework.integration.annotation.EndpointId
-import org.springframework.integration.annotation.InboundChannelAdapter
-import org.springframework.integration.annotation.Poller
 
 /**
  * Redis stream configuration class. This class contains all Redis Stream integration specific
@@ -49,7 +44,7 @@ class StreamConfig {
    * InboundChannelAdapter has only method scope, used this producer method to bound custom
    * RedisStreamMessageSource to inbound channel adapter
    */
-  @Bean
+  /*@Bean
   @InboundChannelAdapter(
     channel = "eventDispatcherReceiverCommandChannel",
     poller = [Poller(fixedDelay = "1000", maxMessagesPerPoll = "1")],
@@ -64,4 +59,5 @@ class StreamConfig {
       redisStreamReceiver = redisStreamReceiver,
       eventDispatcherCommandsTemplateWrapper = eventDispatcherCommandsTemplateWrapper,
       redisStreamConf = redisStreamConf)
+   */
 }
